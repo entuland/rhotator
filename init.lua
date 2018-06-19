@@ -4,7 +4,7 @@ rhotator.mod_path = minetest.get_modpath(minetest.get_current_modname())
 
 local matrix = dofile(rhotator.mod_path .. "/lib/matrix.lua")
 
-local enable_chat_notifications = true
+local enable_chat_notifications = false
 
 -- constants
 
