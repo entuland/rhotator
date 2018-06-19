@@ -6,6 +6,8 @@ Developed and tested on Minetest 0.4.16 - try in other versions at your own risk
 
 If you like my contributions you may consider reading http://entuland.com/en/support-entuland
 
+WIP MOD forum thread: https://forum.minetest.net/viewtopic.php?f=9&t=20321
+
 # Why yet another screwdriver?
 
 The default screwdriver included in minetest_game, as well as any other screwdriver mod I have found, operate differently depending on the node's direction and rotation. This means that any given click on a node may produce different results which you cannot predict at a glance.
