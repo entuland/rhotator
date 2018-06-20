@@ -35,9 +35,9 @@ Here you can see the Rhotator Screwdriver along with the Testing Cube.
 
 *The testing cube is just an addition to help practicing with this screwdriver.*
 
-The Rhotator Screwdriver will rotate ANY node where `paramtype2 == "facedir"`
+The Rhotator Screwdriver will rotate ANY node where `paramtype2` has any of these values: `facedir, colorfacedir, wallmounted, colorwallmounted`.
 
-More node types will be supported in the future.
+The latter two types are handled exactly as the built-in screwdriver of `minetest_game` handles them.
 
 ![Preview](/screenshots/preview.png)
 
