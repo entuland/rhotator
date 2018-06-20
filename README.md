@@ -85,5 +85,6 @@ Here are possible messages you can receive:
 - Pulled closest edge (sneak + left click)
 - Cannot rotate node with paramtype2 == glasslikeliquidlevel
 - Unsupported node type: modname:nodename
+- Wallmounted node rotated with default screwdriver behavior
 
 plus some more messages warning about protected areas or rotations performed or prevented by custom on_rotate() handlers.

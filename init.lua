@@ -285,6 +285,47 @@ end
 handlers.colorfacedir = handlers.facedir
 
 -- ============================================================
+-- Replicate default screwdriver behavior for wallmounted nodes
+
+-- For attached wallmounted nodes: returns true if rotation is valid
+-- simplified version of minetest:builtin/game/falling.lua#L148.
+local function check_attached_node(pos, rotation)
+	local d = minetest.wallmounted_to_dir(rotation)
+	local p2 = vector.add(pos, d)
+	local n = minetest.get_node(p2).name
+	local def2 = minetest.registered_nodes[n]
+	if def2 and not def2.walkable then
+		return false
+	end
+	return true
+end
+
+local wallmounted_tbl = {
+	[PRIMARY_BTN] = {[2] = 5, [3] = 4, [4] = 2, [5] = 3, [1] = 0, [0] = 1},
+	[SECONDARY_BTN] = {[2] = 5, [3] = 4, [4] = 2, [5] = 1, [1] = 0, [0] = 3}
+}
+
+function handlers.wallmounted(node, player, pointed_thing, click)
+	local pos = pointed_thing.under
+	local rotation = node.param2 % 8 -- get first 3 bits
+	local other = node.param2 - rotation
+	rotation = wallmounted_tbl[click][rotation] or 0
+	if minetest.get_item_group(node.name, "attached_node") ~= 0 then
+		-- find an acceptable orientation
+		for i = 1, 5 do
+			if not check_attached_node(pos, rotation) then
+				rotation = wallmounted_tbl[click][rotation] or 0
+			else
+				break
+			end
+		end
+	end
+	return rotation + other, "Wallmounted node rotated with default screwdriver behavior"
+end
+
+handlers.colorwallmounted = handlers.wallmounted
+
+-- ============================================================
 -- interaction
 
 local function interact(player, pointed_thing, click)
