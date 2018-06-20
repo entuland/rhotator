@@ -74,8 +74,14 @@ Rhotator Testing Cube: a Rhotator Screwdriver and any wool block
 
 # Usage feedback
 
-At the beginning of [init.lua](/init.lua) there is a line reading `local enable_chat_notifications = false` - set it to `true` if you want the tool to send you chat messages about the operations it performs and in particular about nodes that aren't currently supported (if you enable the chat notifications you'll receive messages like these:
+An HUD message will show usage feedback, in particular it will inform you about nodes that aren't currently supported.
 
+Here are possible messages you can receive:
+
+- Rotated pointed face clockwise (right click)
+- Rotated pointed face counter-clockwise (sneak + right click)
 - Pushed closest edge (left click)
-- Rotated pointed face (right click)
+- Pulled closest edge (sneak + left click)
 - Cannot rotate node with paramtype2 == glasslikeliquidlevel
+- Unsupported node type: modname:nodename
+

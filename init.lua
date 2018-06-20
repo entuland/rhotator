@@ -4,8 +4,6 @@ rhotator.mod_path = minetest.get_modpath(minetest.get_current_modname())
 
 local matrix = dofile(rhotator.mod_path .. "/lib/matrix.lua")
 
-local enable_chat_notifications = false
-
 -- constants
 
 local POS = {}
@@ -20,10 +18,13 @@ NEG.Y = 5
 PRIMARY_BTN = 1
 SECONDARY_BTN = 2
 
--- helper tables
+-- helper variables
 
 local rot_matrices = {}
 local dir_matrices = {}
+
+local huds = {}
+local hud_timeout_seconds = 3
 
 -- init
 
@@ -172,17 +173,56 @@ local function matrix_to_facedir(mtx)
 	return rhotator._matrix_to_facedir[key]
 end
 
-local function notify(playername, message)
-	if enable_chat_notifications then
-		minetest.chat_send_player(playername, "[rhotator] " .. message)
-	end
-end
-
 local function vector_to_dir_index(vec)
 	local main_axis = extract_main_axis(vec)
 	if main_axis == "x" then return (vec.x > 0) and POS.X or NEG.X end
 	if main_axis == "z" then return (vec.z > 0) and POS.Z or NEG.Z end
 	return (vec.y > 0) and POS.Y or NEG.Y
+end
+
+-- hud functions
+
+local function hud_remove(player)
+	local playername = player:get_player_name()
+	local hud = huds[playername]
+	if not hud then return end
+	if os.time() < hud_duration_time + hud.time then
+		return
+	end
+	player:hud_remove(hud.id)
+	huds[playername] = nil
+end
+
+local function hud_create(player, message)
+	local playername = player:get_player_name()
+	local id = player:hud_add({
+		text = message,
+		hud_elem_type = "text",
+		name = "rhotator_feedback",
+		direction = 0,
+		position = { x = 0.1, y = 0.9},
+		alignment = { x = 1, y = -1},
+		number = 0xFFFFFF,
+	})
+	huds[playername] = {
+		id = id,
+		time = os.time(),
+	}
+end
+
+local function notify(player, message)
+	message = "[rhotator] " .. message
+	local playername = player:get_player_name()
+	local hud = huds[playername]
+	if not hud then
+		hud_create(player, message)
+	else
+		player:hud_change(hud.id, "text", message)
+		hud.time = os.time()
+	end
+	minetest.after(hud_timeout_seconds, function()
+		hud_remove(player)
+	end)
 end
 
 -- rhotator main
@@ -196,12 +236,12 @@ local function interact(itemstack, player, pointed_thing, click)
 	local def = minetest.registered_nodes[node.name]
 
 	if not node or not def then
-		notify(player:get_player_name(), "Unsupported node type: " .. node.name)
+		notify(player, "Unsupported node type: " .. node.name)
 		return
 	end
 
 	if def.paramtype2 ~= "facedir" then
-		notify(player:get_player_name(), "Cannot rotate node with paramtype2 == " .. def.paramtype2)
+		notify(player, "Cannot rotate node with paramtype2 == " .. def.paramtype2)
 		return
 	end
 
@@ -216,17 +256,17 @@ local function interact(itemstack, player, pointed_thing, click)
 		transform = dir_matrices[vector_to_dir_index(unit.thumb)]
 		if controls.sneak then
 			rotation = rot_matrices[3]
-			notify(player:get_player_name(), "Pulled closest edge (sneak + left click)")
+			notify(player, "Pulled closest edge (sneak + left click)")
 		else
-			notify(player:get_player_name(), "Pushed closest edge (left click)")
+			notify(player, "Pushed closest edge (left click)")
 		end
 	else
 		transform = dir_matrices[vector_to_dir_index(unit.back)]
 		if controls.sneak then
 			rotation = rot_matrices[3]
-			notify(player:get_player_name(), "Rotated pointed face counter-clockwise (sneak + right click)")
+			notify(player, "Rotated pointed face counter-clockwise (sneak + right click)")
 		else
-			notify(player:get_player_name(), "Rotated pointed face clockwise (right click)")		
+			notify(player, "Rotated pointed face clockwise (right click)")		
 		end
 	end
 
