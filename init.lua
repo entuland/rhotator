@@ -208,17 +208,30 @@ local function interact(itemstack, player, pointed_thing, click)
 	local unit = extract_unit_vectors(player, pointed_thing)
 
 	local transform = false
-
+	local rotation = rot_matrices[1]
+	
+	local controls = player:get_player_control()
+	
 	if click == PRIMARY_BTN then
 		transform = dir_matrices[vector_to_dir_index(unit.thumb)]
-		notify(player:get_player_name(), "Pushed closest edge (left click)")
+		if controls.sneak then
+			rotation = rot_matrices[3]
+			notify(player:get_player_name(), "Pulled closest edge (sneak + left click)")
+		else
+			notify(player:get_player_name(), "Pushed closest edge (left click)")
+		end
 	else
 		transform = dir_matrices[vector_to_dir_index(unit.back)]
-		notify(player:get_player_name(), "Rotated pointed face (right click)")
+		if controls.sneak then
+			rotation = rot_matrices[3]
+			notify(player:get_player_name(), "Rotated pointed face counter-clockwise (sneak + right click)")
+		else
+			notify(player:get_player_name(), "Rotated pointed face clockwise (right click)")		
+		end
 	end
 
 	local start = get_facedir_transform(node.param2)
-	local stop = transform * rot_matrices[1] * transform:invert() * start
+	local stop = transform * rotation * transform:invert() * start
 
 	minetest.set_node(pointed_thing.under,{
 		name = node.name,

@@ -47,10 +47,12 @@ Pretty simple:
 - a right click will rotate the face you're pointing in clockwise direction
   - the arrow in the Testing Cube shows how the face will rotate when right-clicked
   - `RT` in the tool stands for `rotate`
+  - hold the sneak key down while clicking to rotate counter-clockwise
 
 - a left click will rotate the node as if you "pushed" the closest edge you're pointing at
   - the colored edges in the Testing Cube indicate the color of the face you'll see when left-clicking near that edge
   - `PS` in the tool stands for `push`
+  - hold the sneak key down while clicking to "pull" instead of "pushing"
 
 The left-click interaction area is not limited to the edges you can see in the Testing Cube. In reality you can click anywhere in a triangle like this (highlighted here just for convenience, you won't see anything like this in the game):
 
