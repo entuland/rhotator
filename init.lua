@@ -1,8 +1,8 @@
 rhotator = {}
 
-rhotator.mod_path = minetest.get_modpath(minetest.get_current_modname())
+local mod_path = minetest.get_modpath(minetest.get_current_modname())
 
-local matrix = dofile(rhotator.mod_path .. "/lib/matrix.lua")
+local matrix = dofile(mod_path .. "/lib/matrix.lua")
 
 -- constants
 
@@ -15,9 +15,13 @@ POS.X = 3
 NEG.X = 4
 NEG.Y = 5
 
-PRIMARY_BTN = 1
-SECONDARY_BTN = 2
+local PRIMARY_BTN = 1
+local SECONDARY_BTN = 2
 
+rhotator.PRIMARY_BTN = PRIMARY_BTN
+rhotator.SECONDARY_BTN = SECONDARY_BTN
+
+-- ============================================================
 -- helper variables
 
 local rot_matrices = {}
@@ -26,6 +30,7 @@ local dir_matrices = {}
 local huds = {}
 local hud_timeout_seconds = 3
 
+-- ============================================================
 -- init
 
 local function init_transforms()
@@ -94,6 +99,7 @@ end
 
 init_transforms()
 
+-- ============================================================
 -- helper functions
 
 local function cross_product(a, b)
@@ -180,13 +186,14 @@ local function vector_to_dir_index(vec)
 	return (vec.y > 0) and POS.Y or NEG.Y
 end
 
+-- ============================================================
 -- hud functions
 
 local function hud_remove(player)
 	local playername = player:get_player_name()
 	local hud = huds[playername]
 	if not hud then return end
-	if os.time() < hud_duration_time + hud.time then
+	if os.time() < hud_timeout_seconds + hud.time then
 		return
 	end
 	player:hud_remove(hud.id)
@@ -225,71 +232,128 @@ local function notify(player, message)
 	end)
 end
 
+-- ============================================================
 -- rhotator main
 
-local function interact(itemstack, player, pointed_thing, click)
-	if pointed_thing.type ~= "node" then
-		return
-	end
-
-	local node = minetest.get_node_or_nil(pointed_thing.under)
-	local def = minetest.registered_nodes[node.name]
-
-	if not node or not def then
-		notify(player, "Unsupported node type: " .. node.name)
-		return
-	end
-
-	if def.paramtype2 ~= "facedir" then
-		notify(player, "Cannot rotate node with paramtype2 == " .. def.paramtype2)
-		return
-	end
-
+local function rotate_main(param2_rotation, player, pointed_thing, click, rot_index)
 	local unit = extract_unit_vectors(player, pointed_thing)
-
+	local current_pos = pointed_thing.under
+	
+	local message
 	local transform = false
-	local rotation = rot_matrices[1]
+	local rotation = rot_matrices[rot_index]
 	
 	local controls = player:get_player_control()
 	
 	if click == PRIMARY_BTN then
 		transform = dir_matrices[vector_to_dir_index(unit.thumb)]
 		if controls.sneak then
-			rotation = rot_matrices[3]
-			notify(player, "Pulled closest edge (sneak + left click)")
+			rotation = rot_matrices[(rot_index + 2) % 4]
+			message = "Pulled closest edge (sneak + left click)"
 		else
-			notify(player, "Pushed closest edge (left click)")
+			message = "Pushed closest edge (left click)"
 		end
 	else
 		transform = dir_matrices[vector_to_dir_index(unit.back)]
 		if controls.sneak then
-			rotation = rot_matrices[3]
-			notify(player, "Rotated pointed face counter-clockwise (sneak + right click)")
+			rotation = rot_matrices[(rot_index + 2) % 4]
+			message = "Rotated pointed face counter-clockwise (sneak + right click)"
 		else
-			notify(player, "Rotated pointed face clockwise (right click)")		
+			message = "Rotated pointed face clockwise (right click)"	
 		end
 	end
 
-	local start = get_facedir_transform(node.param2)
+	local start = get_facedir_transform(param2_rotation)
 	local stop = transform * rotation * transform:invert() * start
+	return matrix_to_facedir(stop), message
+	
+end
 
-	minetest.set_node(pointed_thing.under,{
-		name = node.name,
-		param1 = node.param1,
-		param2 = matrix_to_facedir(stop),
-	})
+-- ============================================================
+-- param2 handlers
 
+local handlers = {}
+
+function handlers.facedir(node, player, pointed_thing, click)	
+	local rotation = node.param2 % 32 -- get first 5 bits
+	local remaining = node.param2 - rotation
+	local rotate_90deg_clockwise = 1
+	local rotation_result, message = rotate_main(rotation, player, pointed_thing, click, rotate_90deg_clockwise)
+	return rotation_result + remaining, message
+end
+
+handlers.colorfacedir = handlers.facedir
+
+-- ============================================================
+-- interaction
+
+local function interact(player, pointed_thing, click)
+	if pointed_thing.type ~= "node" then
+		return
+	end
+	
+	local pos = pointed_thing.under
+	if minetest.is_protected(pos, player:get_player_name()) then
+		notify(player, "You're not authorized to alter nodes in this area")
+		minetest.record_protection_violation(pos, player:get_player_name())
+		return
+	end
+
+	local node = minetest.get_node(pointed_thing.under)
+	local nodedef = minetest.registered_nodes[node.name]
+
+	if not nodedef then
+		notify(player, "Unsupported node type: " .. node.name)
+		return
+	end
+
+	local handler = handlers[nodedef.paramtype2]
+		
+	-- Node provides a handler, so let the handler decide instead if the node can be rotated
+	if nodedef.on_rotate then
+		-- Copy pos and node because callback can modify it
+		local pass_node = {name = node.name, param1 = node.param1, param2 = node.param2}
+		local pass_pos = vector.new(pos)
+		local result = nodedef.on_rotate(pass_pos, pass_node, player, click, node.param2)
+		if result == true then
+			notify(player, "Rotation reportedly performed by on_rotate()")
+			return
+		else
+			notify(player, "Rotation disallowed by on_rotate() return value")
+			return
+		end
+	elseif nodedef.on_rotate == false then
+		notify(player, "Rotation prevented by on_rotate == false")
+		return
+	elseif nodedef.can_dig and not nodedef.can_dig(pos, player) then
+		notify(player, "Rotation prevented by can_dig() checks")
+		return
+	elseif not handler then
+		notify(player, "Cannot rotate node with paramtype2 == " .. nodedef.paramtype2)
+		return
+	end
+	
+	local new_param2, handler_message = handler(node, player, pointed_thing, click)
+	node.param2 = new_param2
+	minetest.swap_node(pos, node)
+	minetest.check_for_falling(pos)
+
+	if handler_message then
+		notify(player, handler_message)
+	end
+	
+	return	
 end
 
 minetest.register_tool("rhotator:screwdriver", {
 	description = "Rhotator Screwdriver (left-click pushes edge, right-click rotates face)",
 	inventory_image = "rhotator.png",
 	on_use = function(itemstack, player, pointed_thing)
-		interact(itemstack, player, pointed_thing, PRIMARY_BTN)
+		interact(player, pointed_thing, PRIMARY_BTN)
 		return itemstack
 	end,
 	on_place = function(itemstack, player, pointed_thing)
-		interact(itemstack, player, pointed_thing, SECONDARY_BTN)
+		interact(player, pointed_thing, SECONDARY_BTN)
 		return itemstack
 	end,
 })

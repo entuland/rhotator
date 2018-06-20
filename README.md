@@ -19,6 +19,7 @@ These are the factors that affect the results of a click:
 - the face you point at
 - where on that face you point
 - what button you click
+- whether or not you hold down the sneak key
 
 You will always be able to predict exactly the effect of the Rhotator Screwdriver.
 
@@ -85,3 +86,4 @@ Here are possible messages you can receive:
 - Cannot rotate node with paramtype2 == glasslikeliquidlevel
 - Unsupported node type: modname:nodename
 
+plus some more messages warning about protected areas or rotations performed or prevented by custom on_rotate() handlers.
