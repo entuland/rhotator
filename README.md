@@ -8,6 +8,12 @@ If you like my contributions you may consider reading http://entuland.com/en/sup
 
 WIP MOD forum thread: https://forum.minetest.net/viewtopic.php?f=9&t=20321
 
+# Dependencies
+
+A thin wrapper around a very useful library to deal with Matrices:
+
+[matrix] https://github.com/entuland/lua-matrix
+
 # Why yet another screwdriver?
 
 The default screwdriver included in minetest_game, as well as any other screwdriver mod I have found, operate differently depending on the node's direction and rotation. This means that any given click on a node may produce different results which you cannot predict at a glance.

@@ -2,8 +2,6 @@ rhotator = {}
 
 local mod_path = minetest.get_modpath(minetest.get_current_modname())
 
-local matrix = dofile(mod_path .. "/lib/matrix.lua")
-
 -- constants
 
 local POS = {}
