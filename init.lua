@@ -1,6 +1,7 @@
 rhotator = {}
 
 local mod_path = minetest.get_modpath(minetest.get_current_modname())
+local storage = minetest.get_mod_storage()
 
 -- constants
 
@@ -27,6 +28,8 @@ local dir_matrices = {}
 
 local huds = {}
 local hud_timeout_seconds = 3
+
+local facedir_memory = {}
 
 -- ============================================================
 -- init
@@ -277,6 +280,12 @@ function handlers.facedir(node, player, pointed_thing, click)
 	local remaining = node.param2 - rotation
 	local rotate_90deg_clockwise = 1
 	local rotation_result, message = rotate_main(rotation, player, pointed_thing, click, rotate_90deg_clockwise)
+	
+	local playername = player:get_player_name()
+	if storage:get_int("memory_" .. playername) == 1 then
+		facedir_memory[playername] = rotation_result
+	end
+	
 	return rotation_result + remaining, message
 end
 
@@ -324,7 +333,70 @@ end
 handlers.colorwallmounted = handlers.wallmounted
 
 -- ============================================================
+-- rotation memory
+
+local function command_memory(playername, params)
+	local player = minetest.get_player_by_name(playername)
+	local key = "memory_" .. playername
+	local memory = storage:get_int(key) == 1
+	if params[2] == "on" then
+		storage:set_int(key, 1)
+		memory = true
+	elseif params[2] == "off" then
+		storage:set_int(key, 0)
+		memory = false
+	elseif params[2] then
+		rhotator.command(playername, "")
+		return
+	end
+	minetest.chat_send_player(playername, "[rhotator] Memory is " .. (memory and "on" or "off"))
+end
+
+local function rhotator_on_placenode(pos, newnode, placer, oldnode, itemstack, pointed_thing)
+	if not placer or not placer.get_player_name then return end
+	
+	local playername = placer:get_player_name()
+	local key = "memory_" .. playername
+	local memory = storage:get_int(key) == 1
+	if not memory then return end
+
+	local new_rotation = facedir_memory[playername]
+	if not new_rotation then return end
+	
+	local nodedef = minetest.registered_nodes[newnode.name]
+	if not nodedef then return end
+	
+	local paramtype2 = nodedef.paramtype2
+
+	if paramtype2 ~= "facedir" and paramtype2 ~= "colorfacedir" then return end
+
+	local old_rotation = newnode.param2 % 32 -- get first 5 bits
+	local remaining = newnode.param2 - old_rotation
+	
+	newnode.param2 = new_rotation + remaining
+	minetest.swap_node(pos, newnode)
+	minetest.check_for_falling(pos)
+	
+	notify(placer, "Placed node according to previous rotation")
+end
+
+-- ============================================================
 -- interaction
+
+function rhotator.command(playername, param)
+	if param == "" then
+		minetest.chat_send_player(playername, "[rhotator] Usage: rhotator memory [on|off]")
+		return
+	end
+
+	local params = param:split(" ")
+	if params[1] == "memory" then
+		command_memory(playername, params)
+		return	
+	end
+
+	minetest.chat_send_player(playername, "[rhotator] unsupported param: " .. param)
+end
 
 local function interact(player, pointed_thing, click)
 	if pointed_thing.type ~= "node" then
@@ -422,3 +494,7 @@ minetest.register_craft({
 		{"rhotator:screwdriver"},
 	}
 })
+
+minetest.register_on_placenode(rhotator_on_placenode)
+
+minetest.register_chatcommand("rhotator", {func = rhotator.command})

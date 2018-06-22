@@ -14,6 +14,15 @@ A thin wrapper around a very useful library to deal with Matrices:
 
 [matrix] https://github.com/entuland/lua-matrix
 
+# Main features
+
+- for `facedir` and `colorfacedir` nodes:
+  - rotate any  node in a predictable manner regardless its current rotation
+  - **rotation memory**: optionally, place any new node with the same rotation as the last rotated node (see [Chat commands](#chat-commands) section)
+
+- for `wallmounted` and `colorwallmounted` nodes:
+  - cycle through valid rotations in the same way as the built-in screwdriver would
+
 # Why yet another screwdriver?
 
 The default screwdriver included in minetest_game, as well as any other screwdriver mod I have found, operate differently depending on the node's direction and rotation. This means that any given click on a node may produce different results which you cannot predict at a glance.
@@ -78,6 +87,13 @@ Rhotator Screwdriver: a stick and a copper ingot;
 Rhotator Testing Cube: a Rhotator Screwdriver and any wool block
 
 ![Testing cube crafting](/screenshots/testcube-crafting.png)
+
+# Chat commands
+
+- `rhotator` shows available commands
+- `rhotator memory` shows current placement memory flag (on or off)
+- `rhotator memory on` enable placement memory
+- `rhotator memory off` disable placement memory
 
 # Usage feedback
 
