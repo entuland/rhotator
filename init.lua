@@ -2,6 +2,7 @@ rhotator = {}
 
 local mod_path = minetest.get_modpath(minetest.get_current_modname())
 local storage = minetest.get_mod_storage()
+local notify = dofile(mod_path .. "/notify.lua")
 
 -- constants
 
@@ -25,9 +26,6 @@ rhotator.SECONDARY_BTN = SECONDARY_BTN
 
 local rot_matrices = {}
 local dir_matrices = {}
-
-local huds = {}
-local hud_timeout_seconds = 3
 
 local facedir_memory = {}
 
@@ -185,52 +183,6 @@ local function vector_to_dir_index(vec)
 	if main_axis == "x" then return (vec.x > 0) and POS.X or NEG.X end
 	if main_axis == "z" then return (vec.z > 0) and POS.Z or NEG.Z end
 	return (vec.y > 0) and POS.Y or NEG.Y
-end
-
--- ============================================================
--- hud functions
-
-local function hud_remove(player)
-	local playername = player:get_player_name()
-	local hud = huds[playername]
-	if not hud then return end
-	if os.time() < hud_timeout_seconds + hud.time then
-		return
-	end
-	player:hud_remove(hud.id)
-	huds[playername] = nil
-end
-
-local function hud_create(player, message)
-	local playername = player:get_player_name()
-	local id = player:hud_add({
-		text = message,
-		hud_elem_type = "text",
-		name = "rhotator_feedback",
-		direction = 0,
-		position = { x = 0.1, y = 0.9},
-		alignment = { x = 1, y = -1},
-		number = 0xFFFFFF,
-	})
-	huds[playername] = {
-		id = id,
-		time = os.time(),
-	}
-end
-
-local function notify(player, message)
-	message = "[rhotator] " .. message
-	local playername = player:get_player_name()
-	local hud = huds[playername]
-	if not hud then
-		hud_create(player, message)
-	else
-		player:hud_change(hud.id, "text", message)
-		hud.time = os.time()
-	end
-	minetest.after(hud_timeout_seconds, function()
-		hud_remove(player)
-	end)
 end
 
 -- ============================================================
@@ -402,10 +354,9 @@ local function interact(player, pointed_thing, click)
 	if pointed_thing.type ~= "node" then
 		return
 	end
-	
 	local pos = pointed_thing.under
 	if minetest.is_protected(pos, player:get_player_name()) then
-		notify(player, "You're not authorized to alter nodes in this area")
+		notify.error(player, "You're not authorized to alter nodes in this area")
 		minetest.record_protection_violation(pos, player:get_player_name())
 		return
 	end
@@ -414,12 +365,12 @@ local function interact(player, pointed_thing, click)
 	local nodedef = minetest.registered_nodes[node.name]
 
 	if not nodedef then
-		notify(player, "Unsupported node type: " .. node.name)
+		notify.error(player, "Unsupported node type: " .. node.name)
 		return
 	end
 
 	local handler = handlers[nodedef.paramtype2]
-		
+	
 	-- Node provides a handler, so let the handler decide instead if the node can be rotated
 	if nodedef.on_rotate then
 		-- Copy pos and node because callback can modify it
@@ -430,17 +381,17 @@ local function interact(player, pointed_thing, click)
 			notify(player, "Rotation reportedly performed by on_rotate()")
 			return
 		else
-			notify(player, "Rotation disallowed by on_rotate() return value")
+			notify.warning(player, "Rotation disallowed by on_rotate() return value")
 			return
 		end
 	elseif nodedef.on_rotate == false then
-		notify(player, "Rotation prevented by on_rotate == false")
+		notify.warning(player, "Rotation prevented by on_rotate == false")
 		return
 	elseif nodedef.can_dig and not nodedef.can_dig(pos, player) then
-		notify(player, "Rotation prevented by can_dig() checks")
+		notify.warning(player, "Rotation prevented by can_dig() checks")
 		return
 	elseif not handler then
-		notify(player, "Cannot rotate node with paramtype2 == " .. nodedef.paramtype2)
+		notify.warning(player, "Cannot rotate node with paramtype2 == " .. nodedef.paramtype2)
 		return
 	end
 	
