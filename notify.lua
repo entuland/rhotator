@@ -14,8 +14,7 @@ local notify = {}
 notify.__index = notify
 setmetatable(notify, notify)
 
-local function hud_remove(player)
-	local playername = player:get_player_name()
+local function hud_remove(player, playername)
 	local hud = huds[playername]
 	if not hud then return end
 	if os.time() < hud_timeout_seconds + hud.time then
@@ -57,15 +56,23 @@ end
 notify.error = notify.err
 
 notify.__call = function(self, player, message, params)
+	local playername
+	if type(player) == "string" then
+		playername = player
+		player = minetest.get_player_by_name(playername)
+	elseif player and player.get_player_name then
+		playername = player:get_player_name()
+	else
+		return
+	end
 	message = "[" .. mod_name .. "] " .. message
-	local playername = player:get_player_name()
 	local hud = huds[playername]
 	if hud then
 		player:hud_remove(hud.id)
 	end
 	hud_create(player, message, params)
 	minetest.after(hud_timeout_seconds, function()
-		hud_remove(player)
+		hud_remove(player, playername)
 	end)
 end
 
