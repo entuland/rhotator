@@ -4,16 +4,47 @@
 -- the original versions are in "default/recipes.lua"
 
 return {
-	["rhotator:screwdriver"] = {
-		{"default:copper_ingot"},
-		{"group:stick"},
-	},
-	["rhotator:screwdriver_alt"] = {
-		{"default:copper_ingot", "group:stick"},
-		{"group:stick", ""},
-	},
-	["rhotator:cube"] = {
-		{"group:wool"},
-		{"rhotator:screwdriver"},
-	},
+    {
+        output = "rhotator:screwdriver",
+        recipe = {
+            {"default:copper_ingot"},
+            {"group:stick"},
+        },
+    },
+    {
+        output = "rhotator:screwdriver_alt",
+        recipe = {
+            {"default:copper_ingot", "group:stick"},
+            {"group:stick", ""},
+        },
+    },
+    {
+        output = "rhotator:memory",
+        recipe = {
+            {"group:stick"},
+            {"default:copper_ingot"},
+            {"group:stick"},
+        },
+    },
+    {
+        output = "rhotator:cube",
+        recipe = {
+            {"group:wool"},
+            {"rhotator:screwdriver"},
+        },
+    },
+    {
+        output = "rhotator:cube",
+        recipe = {
+            {"group:wool"},
+            {"rhotator:screwdriver_alt"},
+        },
+    },
+    {
+        output = "rhotator:cube",
+        recipe = {
+            {"group:wool"},
+            {"rhotator:memory"},
+        },
+    },
 }

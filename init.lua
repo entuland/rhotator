@@ -454,13 +454,55 @@ local function interact(player, pointed_thing, click)
 end
 
 local function primary_callback(itemstack, player, pointed_thing)
-    interact(player, pointed_thing, PRIMARY_BTN)
-    return itemstack
+	interact(player, pointed_thing, PRIMARY_BTN)
+	return itemstack
 end
 
 local function secondary_callback(itemstack, player, pointed_thing)
-    interact(player, pointed_thing, SECONDARY_BTN)
-    return itemstack
+	interact(player, pointed_thing, SECONDARY_BTN)
+	return itemstack
+end
+
+local function toggle_memory_callback(itemstack, player, pointed_thing)
+	local playername = player:get_player_name()
+	local key = "memory_" .. playername
+	local memory = storage:get_int(key) == 1
+	if memory then
+		storage:set_int(key, 0)
+		memory = false
+	else
+		storage:set_int(key, 1)
+		memory = true
+	end
+	notify(playername, "Memory is " .. (memory and "on" or "off"))
+	return itemstack
+end
+
+local function copy_rotation_callback(itemstack, player, pointed_thing)
+	local playername = player:get_player_name()
+	if pointed_thing.type ~= "node" then
+		return
+	end
+	local pos = pointed_thing.under
+	local node = minetest.get_node(pointed_thing.under)
+	local nodedef = minetest.registered_nodes[node.name]
+
+	if not nodedef then
+		notify.error(player, "Unsupported node type: " .. node.name)
+		return
+	end
+	
+	local paramtype2 = nodedef.paramtype2
+
+	if paramtype2 ~= "facedir" and paramtype2 ~= "colorfacedir" then 
+		notify.warning(player, "Unsupported node type: " .. node.name .. " - cannot copy rotation")
+		return
+	end
+
+	local rotation = node.param2 % 32 -- get first 5 bits
+	facedir_memory[playername] = rotation
+	notify(player, "Copied rotation from node: " .. node.name)
+	return itemstack
 end
 
 minetest.register_tool("rhotator:screwdriver", {
@@ -477,6 +519,13 @@ minetest.register_tool("rhotator:screwdriver_alt", {
 	on_place = primary_callback,
 })
 
+minetest.register_tool("rhotator:memory", {
+	description = "Rhotator Memory Tool\nLeft-click toggles rotation memory\nRight-click copies rotation from pointed node",
+	inventory_image = "rhotator-memory.png",
+	on_use = toggle_memory_callback,
+	on_place = copy_rotation_callback,
+})
+
 minetest.register_node("rhotator:cube", {
 	drawtype = "mesh",
 	mesh = "rhotocube.obj",
@@ -489,29 +538,24 @@ minetest.register_node("rhotator:cube", {
 
 local full_recipes_filename = custom_or_default("rhotator", mod_path, "recipes.lua")
 if not full_recipes_filename then
-    error("[rhotator] unable to find " .. mod_path .. "/custom.recipes.lua")
+	error("[rhotator] unable to find " .. mod_path .. "/custom.recipes.lua")
 end
 
 local recipes = dofile(full_recipes_filename);
 
 if type(recipes) ~= "table" then
-    error("[rhotator] malformed file " .. mod_path .. "/custom.recipes.lua")
+	error("[rhotator] malformed file " .. mod_path .. "/custom.recipes.lua")
 end
 
-local expected_recipes = { "rhotator:screwdriver", "rhotator:screwdriver_alt", "rhotator:cube" }
-
-for _, itemname in ipairs(expected_recipes) do
-    if type(recipes[itemname]) == "table" then
-        minetest.register_craft({
-            output = itemname,
-            recipe = recipes[itemname],
-        })
-    end
+for _, item in ipairs(recipes) do
+	if type(item) == "table" and type(item.output) == "string" and type(item.recipe) == "table" then
+		minetest.register_craft(item)
+	end
 end
 
 minetest.register_on_placenode(rhotator_on_placenode)
 
 minetest.register_chatcommand("rhotator", {
-    description = "memory [on|off]: displays or sets rotation memory for newly placed blocks",
-    func = rhotator.command
+	description = "memory [on|off]: displays or sets rotation memory for newly placed blocks",
+	func = rhotator.command
 })

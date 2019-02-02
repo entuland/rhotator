@@ -16,6 +16,10 @@ A thin wrapper around a very useful library to deal with Matrices:
 
 [matrix] https://github.com/entuland/lua-matrix
 
+# Important
+
+From version 1.3 recipes for all crafts can be customized in `custom.recipes.lua` - anytime you're upgrading this mod verify `default/recipes.lua` for new crafts or a different file format and update `custom.recipes.lua` accordingly.
+
 # Main features
 
 - for `facedir` and `colorfacedir` nodes:
@@ -82,6 +86,14 @@ The `push` interaction area is not limited to the edges you can see in the Testi
 
 Nodes that don't occupy a full cube (such as slabs and stairs) can still be rotated properly, it's enough that you pay attention to the direction of the part you're pointing at - the "stomp" parts of the stairs, for example, will behave as the "top" face, the "rise" parts will behave as the "front" face. With the Rhotator Screwdriver there never really is a "top" or a "front" or whatever: the only thing that matters is the face you're pointing at.
 
+# Rotation memory and the Memory Tool
+
+Anytime you rotate a node with the Rhotator Screwdriver the resulting rotation gets stored, and any subsequent nodes you'll place will be rotated according to that rotation (assuming you have rotation memory on).
+
+In addition to the [Chat commands](#chat-commands) you can use the Memory Tool to toggle memory on and off and to copy rotation from supported nodes.
+
+In the Memory Tool the letters `TG` stand for `toggle memory`, using the left click, the letters `CP` stand for `copy rotation`, using the right click.
+
 # Crafting
 
 Rhotator Screwdriver: a stick and a copper ingot;
@@ -92,7 +104,11 @@ Rhotator Screwdriver Alt: two sticks and a copper ingot;
 
 ![Rhotator Screwdriver Alt crafting](/screenshots/rhotator-alt-recipe.png)
 
-Rhotator Testing Cube: a Rhotator Screwdriver and any wool block
+Rhotator Memory Tool: again two sticks and a copper ingot, in a different pattern;
+
+![Rhotator Memory Tool crafting](/screenshots/rhotator-memory-recipe.png)
+
+Rhotator Testing Cube: any of the screwdriver tools and any wool block
 
 ![Rhotator Testing Cube crafting](/screenshots/rhotator-cube-recipe.png)
 
