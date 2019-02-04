@@ -17,12 +17,40 @@ NEG.Y = 5
 
 local PRIMARY_BTN = 1
 local SECONDARY_BTN = 2
-
-rhotator.PRIMARY_BTN = PRIMARY_BTN
-rhotator.SECONDARY_BTN = SECONDARY_BTN
+local OFF = 0
+local ON = 1
+local AUTO = 2
 
 -- ============================================================
--- helper variables
+-- helpers
+
+local function get_multi_action(playername, primary, sneak)
+	local invert_buttons = storage:get_int("multi_invert_buttons_" .. playername) == 1
+	local invert_sneak = storage:get_int("multi_invert_sneak_" .. playername) == 1
+	local logic_primary = primary ~= invert_buttons
+	local logic_sneak = sneak ~= invert_sneak
+	if logic_primary then
+		if not logic_sneak then
+			return {"rotate", "Rotates pointed-to face clockwise"}
+		else
+			return {"push", "Pushes closest edge"}
+		end
+	else
+		if not logic_sneak then
+			return {"memory", "Cycles through memory modes"}
+		else
+			return {"copy", "Copies rotation from pointed-to node"} 
+		end
+	end
+end
+
+local rhotator_command_description = table.concat({
+	"displays this description",
+	"/rhotator memory [on|off|auto]: displays or sets rotation memory for newly placed blocks (auto means 'auto copy from pointed-to node if possible, no rotation otherwise')",
+	"/rhotator multi: lists the configuration of the multitool",
+	"/rhotator multi invert_buttons [on|off]: displays or sets mouse button inversion in the multitool",
+	"/rhotator multi invert_sneak [on|off]: displays or sets sneak effect inversion in the multitool",
+}, "\n")
 
 local rot_matrices = {}
 local dir_matrices = {}
@@ -234,7 +262,7 @@ end
 -- ============================================================
 -- rhotator main
 
-local function rotate_main(param2_rotation, player, pointed_thing, click, rot_index)
+local function rotate_main(param2_rotation, player, pointed_thing, click, rot_index, sneak)
 	local unit = extract_unit_vectors(player, pointed_thing)
 	local current_pos = pointed_thing.under
 
@@ -242,11 +270,9 @@ local function rotate_main(param2_rotation, player, pointed_thing, click, rot_in
 	local transform = false
 	local rotation = rot_matrices[rot_index]
 
-	local controls = player:get_player_control()
-
 	if click == PRIMARY_BTN then
 		transform = dir_matrices[vector_to_dir_index(unit.thumb)]
-		if controls.sneak then
+		if sneak then
 			rotation = rot_matrices[(rot_index + 2) % 4]
 			message = "Pulled closest edge"
 		else
@@ -254,7 +280,7 @@ local function rotate_main(param2_rotation, player, pointed_thing, click, rot_in
 		end
 	else
 		transform = dir_matrices[vector_to_dir_index(unit.back)]
-		if controls.sneak then
+		if sneak then
 			rotation = rot_matrices[(rot_index + 2) % 4]
 			message = "Rotated pointed face counter-clockwise"
 		else
@@ -273,13 +299,13 @@ end
 
 local handlers = {}
 
-function handlers.facedir(node, player, pointed_thing, click)
+function handlers.facedir(node, player, pointed_thing, click, sneak)
 	local rotation = node.param2 % 32 -- get first 5 bits
 	local remaining = node.param2 - rotation
 	local rotate_90deg_clockwise = 1
-	local rotation_result, message = rotate_main(rotation, player, pointed_thing, click, rotate_90deg_clockwise)
+	local rotation_result, message = rotate_main(rotation, player, pointed_thing, click, rotate_90deg_clockwise, sneak)
 
-	local playername = player:get_player_name()
+	local playername = player and player:get_player_name() or ""
 	if storage:get_int("memory_" .. playername) == 1 then
 		facedir_memory[playername] = rotation_result
 	end
@@ -331,51 +357,82 @@ end
 handlers.colorwallmounted = handlers.wallmounted
 
 -- ============================================================
--- rotation memory
+-- rotation memory, flags and placement
 
-local function command_memory(playername, params)
+local function flag_helper(playername, key_prefix, flag, readable, use_hud)
 	local player = minetest.get_player_by_name(playername)
-	local key = "memory_" .. playername
-	local memory = storage:get_int(key) == 1
-	if params[2] == "on" then
-		storage:set_int(key, 1)
-		memory = true
-	elseif params[2] == "off" then
-		storage:set_int(key, 0)
-		memory = false
-	elseif params[2] then
+	if not player then return end
+	local key = key_prefix .. "_" .. playername
+	local newval = storage:get_int(key) or 0
+	if flag == "off" then
+		newval = 0
+		storage:set_int(key, newval)
+	elseif flag == "on" then
+		newval = 1
+		storage:set_int(key, newval)
+	elseif key_prefix == "memory" and flag == "auto" then
+		newval = 2
+		storage:set_int(key, newval)
+	elseif flag then
 		rhotator.command(playername, "")
 		return
 	end
-	minetest.chat_send_player(playername, "[rhotator] Memory is " .. (memory and "on" or "off"))
+	newval = ({"off", "on", "auto"})[newval + 1]
+	if use_hud then
+		notify(playername, readable .. " is " .. newval)
+	else
+		minetest.chat_send_player(playername, "[rhotator] " .. readable .. " is " .. newval)
+	end
 end
 
-local function rhotator_on_placenode(pos, newnode, placer, oldnode, itemstack, pointed_thing)
-	if not placer or not placer.get_player_name then return end
+local copy_rotation_callback
 
-	local playername = placer:get_player_name()
+local function rhotator_on_placenode(pos, newnode, player, oldnode, itemstack, pointed_thing)
+	local playername = player and player:get_player_name() or ""
 	local key = "memory_" .. playername
-	local memory = storage:get_int(key) == 1
-	if not memory then return end
+	local memory = storage:get_int(key)
+	if memory == OFF then
+		-- notify(player, "Default placement (memory placement is off)")
+		return
+	end
 
+	if memory == AUTO then
+		if not copy_rotation_callback(true, player, pointed_thing) then return end
+		memory = ON
+	end
+	
 	local new_rotation = facedir_memory[playername]
-	if not new_rotation then return end
+	if memory == ON and not new_rotation then
+		notify(player, "Default placement (no stored rotation)")
+		return
+	end
 
 	local nodedef = minetest.registered_nodes[newnode.name]
-	if not nodedef then return end
-
+	if not nodedef then
+		notify.warning(player, "Unregistered node placed")
+		return
+	end
+	
 	local paramtype2 = nodedef.paramtype2
 
-	if paramtype2 ~= "facedir" and paramtype2 ~= "colorfacedir" then return end
-
+	if paramtype2 ~= "facedir" and paramtype2 ~= "colorfacedir" then
+		notify.warning(player, "Default placement (can't rotate nodes of this type)")
+		return
+	end
+	
 	local old_rotation = newnode.param2 % 32 -- get first 5 bits
 	local remaining = newnode.param2 - old_rotation
-
-	newnode.param2 = new_rotation + remaining
+	local new_param2 = new_rotation + remaining
+	
+	local click = SECONDARY_BTN
+	
+	if not rhotator.check_on_rotate_handler(pos, newnode, nodedef, player, click, new_param2) then return end
+	
+	newnode.param2 = new_param2
 	minetest.swap_node(pos, newnode)
 	minetest.check_for_falling(pos)
 
-	notify(placer, "Placed node according to previous rotation")
+	notify(player, "Placed node according to previous rotation")
 end
 
 -- ============================================================
@@ -383,27 +440,55 @@ end
 
 function rhotator.command(playername, param)
 	if param == "" then
-		minetest.chat_send_player(playername, "[rhotator] Usage: rhotator memory [on|off]")
+		minetest.chat_send_player(playername, "/rhotator: " .. rhotator_command_description)
 		return
 	end
 
 	local params = param:split(" ")
-	if params[1] == "memory" then
-		command_memory(playername, params)
+	local command = params[1]
+	table.remove(params, 1)
+	if command == "memory" then
+		flag_helper(playername, "memory", params[1], "Rotation memory")
 		return
+	elseif command == "multi" then
+		command = params[1]
+		table.remove(params, 1)
+		if command == "invert_buttons" then
+			flag_helper(playername, "multi_invert_buttons", params[1], "Multitool button inversion")
+			return
+		elseif command == "invert_sneak" then
+			flag_helper(playername, "multi_invert_sneak", params[1], "Multitool sneak inversion")
+			return
+		elseif command == nil then
+			rhotator.command_describe_multi(playername)
+			return
+		end
 	end
-
 	minetest.chat_send_player(playername, "[rhotator] unsupported param: " .. param)
 end
 
-local function interact(player, pointed_thing, click)
+rhotator.command_describe_multi = function(playername)
+	rhotator.command(playername, "memory")
+	rhotator.command(playername, "multi invert_buttons")
+	rhotator.command(playername, "multi invert_sneak")
+	minetest.chat_send_player(playername, table.concat({
+		"[rhotator] Current Multitool configuration:",
+		"    Left-click: " .. get_multi_action(playername, true, false)[2],
+		"    Sneak-left-click: " .. get_multi_action(playername, true, true)[2],
+		"    Right-click: " .. get_multi_action(playername, false, false)[2],
+		"    Sneak-right-click: " .. get_multi_action(playername, false, true)[2],
+	}, "\n"))
+end
+
+local function interact(player, pointed_thing, click, sneak)
 	if pointed_thing.type ~= "node" then
 		return
 	end
 	local pos = pointed_thing.under
-	if minetest.is_protected(pos, player:get_player_name()) then
+	local playername = player and player:get_player_name() or ""
+	if minetest.is_protected(pos, playername) then
 		notify.error(player, "You're not authorized to alter nodes in this area")
-		minetest.record_protection_violation(pos, player:get_player_name())
+		minetest.record_protection_violation(pos, playername)
 		return
 	end
 
@@ -418,22 +503,7 @@ local function interact(player, pointed_thing, click)
 	local handler = handlers[nodedef.paramtype2]
 
 	-- Node provides a handler, so let the handler decide instead if the node can be rotated
-	if nodedef.on_rotate then
-		-- Copy pos and node because callback can modify it
-		local pass_node = {name = node.name, param1 = node.param1, param2 = node.param2}
-		local pass_pos = vector.new(pos)
-		local result = nodedef.on_rotate(pass_pos, pass_node, player, click, node.param2)
-		if result == true then
-			notify(player, "Rotation reportedly performed by on_rotate()")
-			return
-		else
-			notify.warning(player, "Rotation disallowed by on_rotate() return value")
-			return
-		end
-	elseif nodedef.on_rotate == false then
-		notify.warning(player, "Rotation prevented by on_rotate == false")
-		return
-	elseif nodedef.can_dig and not nodedef.can_dig(pos, player) then
+	if nodedef.can_dig and not nodedef.can_dig(pos, player) then
 		notify.warning(player, "Rotation prevented by can_dig() checks")
 		return
 	elseif not handler then
@@ -441,7 +511,10 @@ local function interact(player, pointed_thing, click)
 		return
 	end
 
-	local new_param2, handler_message = handler(node, player, pointed_thing, click)
+	local new_param2, handler_message = handler(node, player, pointed_thing, click, sneak)
+	
+	if not rhotator.check_on_rotate_handler(pos, node, nodedef, player, click, new_param2) then return end
+	
 	node.param2 = new_param2
 	minetest.swap_node(pos, node)
 	minetest.check_for_falling(pos)
@@ -449,37 +522,53 @@ local function interact(player, pointed_thing, click)
 	if handler_message then
 		notify(player, handler_message)
 	end
+end
 
-	return
+rhotator.check_on_rotate_handler = function(pos, node, nodedef, player, click, new_param2)
+	if nodedef.on_rotate == false then
+		notify.warning(player, "Rotation prevented by on_rotate == false")
+		return false
+	elseif nodedef.on_rotate then
+		-- Copy pos and node because callback can modify it
+		local pass_node = {name = node.name, param1 = node.param1, param2 = node.param2}
+		local pass_pos = vector.new(pos)
+		local result = nodedef.on_rotate(pass_pos, pass_node, player, click, new_param2)
+		if result == true then
+			notify(player, "Rotation reportedly performed by on_rotate()")
+			return false
+		end
+		notify.warning(player, "Rotation disallowed by on_rotate() return value")
+		return false
+	end
+	return true
 end
 
 local function primary_callback(itemstack, player, pointed_thing)
-	interact(player, pointed_thing, PRIMARY_BTN)
+	local sneak = player and player:get_player_control().sneak or false
+	interact(player, pointed_thing, PRIMARY_BTN, sneak)
 	return itemstack
 end
 
 local function secondary_callback(itemstack, player, pointed_thing)
-	interact(player, pointed_thing, SECONDARY_BTN)
+	local sneak = player and player:get_player_control().sneak or false
+	interact(player, pointed_thing, SECONDARY_BTN, sneak)
 	return itemstack
 end
 
 local function toggle_memory_callback(itemstack, player, pointed_thing)
-	local playername = player:get_player_name()
+	local playername = player and player:get_player_name() or ""
 	local key = "memory_" .. playername
-	local memory = storage:get_int(key) == 1
-	if memory then
-		storage:set_int(key, 0)
-		memory = false
-	else
-		storage:set_int(key, 1)
-		memory = true
-	end
-	notify(playername, "Memory is " .. (memory and "on" or "off"))
+	local flag = storage:get_int(key) or 0
+	flag = flag + 1
+	if flag == 3 then flag = 0 end
+	flag = ({"off", "on", "auto"})[flag + 1]
+	local use_hud = true
+	flag_helper(playername, "memory", flag, "Rotation memory", use_hud)
 	return itemstack
 end
 
-local function copy_rotation_callback(itemstack, player, pointed_thing)
-	local playername = player:get_player_name()
+copy_rotation_callback = function(itemstack, player, pointed_thing)
+	local playername = player and player:get_player_name() or ""
 	if pointed_thing.type ~= "node" then
 		return
 	end
@@ -526,6 +615,43 @@ minetest.register_tool("rhotator:memory", {
 	on_place = copy_rotation_callback,
 })
 
+local function multi_callback(itemstack, player, pointed_thing, button)
+	local playername = player and player:get_player_name() or ""
+	local primary = button == PRIMARY_BTN
+	local sneak = player and player:get_player_control().sneak	
+	local action = get_multi_action(playername, primary, sneak)[1]
+	
+	if action == "memory" then
+		toggle_memory_callback(itemstack, player, pointed_thing)	
+	elseif action == "copy" then
+		copy_rotation_callback(itemstack, player, pointed_thing)
+	elseif action == "rotate" then
+		interact(player, pointed_thing, SECONDARY_BTN, false)
+	elseif action == "push" then
+		interact(player, pointed_thing, PRIMARY_BTN, false)	
+	else
+		notify.error(playername, "Get a better developer") 
+	end
+end
+
+local function multi_primary_callback(itemstack, player, pointed_thing)
+	multi_callback(itemstack, player, pointed_thing, PRIMARY_BTN)
+	return itemstack
+end
+
+local function multi_secondary_callback(itemstack, player, pointed_thing)
+	multi_callback(itemstack, player, pointed_thing, SECONDARY_BTN)
+	return itemstack
+end
+
+minetest.register_tool("rhotator:screwdriver_multi", {
+	description = "Rhotator Screwdriver Multitool\nCombines rotate, push, memory and copy in a single tool\nRun '/rhotator' in the chat for help",
+	inventory_image = "rhotator-multi.png",
+	on_use = multi_primary_callback,
+	on_place = multi_secondary_callback,
+	on_secondary_use = multi_secondary_callback,
+})
+
 minetest.register_node("rhotator:cube", {
 	drawtype = "mesh",
 	mesh = "rhotocube.obj",
@@ -556,6 +682,6 @@ end
 minetest.register_on_placenode(rhotator_on_placenode)
 
 minetest.register_chatcommand("rhotator", {
-	description = "memory [on|off]: displays or sets rotation memory for newly placed blocks",
+	description = rhotator_command_description,
 	func = rhotator.command
 })

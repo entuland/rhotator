@@ -19,6 +19,14 @@ return {
         },
     },
     {
+        output = "rhotator:screwdriver_multi",
+        recipe = {
+            {"", "group:stick", ""},
+            {"group:stick", "default:copper_ingot", "group:stick"},
+            {"", "group:stick", ""},
+        },
+    },
+    {
         output = "rhotator:memory",
         recipe = {
             {"group:stick"},
@@ -45,6 +53,13 @@ return {
         recipe = {
             {"group:wool"},
             {"rhotator:memory"},
+        },
+    },
+    {
+        output = "rhotator:cube",
+        recipe = {
+            {"group:wool"},
+            {"rhotator:screwdriver_multi"},
         },
     },
 }
