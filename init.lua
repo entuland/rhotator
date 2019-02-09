@@ -112,14 +112,12 @@ local function init_transforms()
 	dir_matrices = dir
 
 	rhotator._facedir_transform = {}
-	rhotator._matrix_to_facedir = {}
 
 	for facedir = 0, 23 do
 		local direction = math.floor(facedir / 4)
 		local rotation = facedir % 4
 		local transform = dir[direction] * rot[rotation]
 		rhotator._facedir_transform[facedir] = transform
-		rhotator._matrix_to_facedir[transform:tostring():gsub("%-0", "0")] = facedir
 	end
 
 end
@@ -198,12 +196,42 @@ local function get_facedir_transform(facedir)
 	return rhotator._facedir_transform[facedir] or rhotator._facedir_transform[0]
 end
 
-local function matrix_to_facedir(mtx)
-	local key = mtx:tostring():gsub("%-0", "0")
-	if not rhotator._matrix_to_facedir[key] then
-		error("Unsupported matrix:\n" .. key)
-	end
-	return rhotator._matrix_to_facedir[key]
+-- =================================================================================
+-- 'facedirs' table and 'matrix_to_facedir' function kindly provided by Pedro Gimeno
+-- https://notabug.org/pgimeno/Gists/src/matrix-to-facedir/matrix_to_facedir.lua
+-- (slightly adapted here for the different matrix format)
+
+local facedirs = {
+	[-246] = 19,
+	[-244] = 10,
+	[-242] = 4,
+	[-240] = 13,
+	[ -90] = 21,
+	[ -82] = 20,
+	[ -80] = 22,
+	[ -72] = 23,
+	[ -36] = 7,
+	[ -30] = 18,
+	[ -24] = 12,
+	[ -18] = 9,
+	[  18] = 11,
+	[  24] = 16,
+	[  30] = 14,
+	[  36] = 5,
+	[  72] = 3,
+	[  80] = 2,
+	[  82] = 0,
+	[  90] = 1,
+	[ 240] = 17,
+	[ 242] = 6,
+	[ 244] = 8,
+	[ 246] = 15,
+}
+
+local function matrix_to_facedir(matrix)
+	local index = matrix[1][1] +  3 * matrix[1][2] +   9 * matrix[1][3]
+	       + 27 * matrix[2][1] + 81 * matrix[2][2] + 243 * matrix[2][3]
+	return facedirs[index] or 0
 end
 
 local function vector_to_dir_index(vec)
