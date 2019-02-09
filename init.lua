@@ -588,8 +588,7 @@ local function toggle_memory_callback(itemstack, player, pointed_thing)
 	local playername = player and player:get_player_name() or ""
 	local key = "memory_" .. playername
 	local flag = storage:get_int(key) or 0
-	flag = flag + 1
-	if flag == 3 then flag = 0 end
+	flag = flag == 2 and 0 or flag + 1
 	flag = ({"off", "on", "auto"})[flag + 1]
 	local use_hud = true
 	flag_helper(playername, "memory", flag, "Rotation memory", use_hud)
