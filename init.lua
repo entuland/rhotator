@@ -502,7 +502,6 @@ local function interact(player, pointed_thing, click, sneak)
 
 	local handler = handlers[nodedef.paramtype2]
 
-	-- Node provides a handler, so let the handler decide instead if the node can be rotated
 	if nodedef.can_dig and not nodedef.can_dig(pos, player) then
 		notify.warning(player, "Rotation prevented by can_dig() checks")
 		return
@@ -513,7 +512,9 @@ local function interact(player, pointed_thing, click, sneak)
 
 	local new_param2, handler_message = handler(node, player, pointed_thing, click, sneak)
 	
-	if not rhotator.check_on_rotate_handler(pos, node, nodedef, player, click, new_param2) then return end
+	-- Node provides a handler, so let the handler decide instead if the node can be rotated
+	local pass = rhotator.check_on_rotate_handler(pos, node, nodedef, player, click, new_param2)
+	if not pass then return end
 	
 	node.param2 = new_param2
 	minetest.swap_node(pos, node)
