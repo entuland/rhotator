@@ -20,7 +20,9 @@ local function hud_remove(player, playername)
 	if os.time() < hud_timeout_seconds + hud.time then
 		return
 	end
-	player:hud_remove(hud.id)
+	if player and player.hud_remove then
+		player:hud_remove(hud.id)
+	end
 	huds[playername] = nil
 end
 
@@ -36,11 +38,13 @@ local function hud_create(player, message, params)
 	def.text = message or def.text
 	def.hud_elem_type = def.hud_elem_type or "text"
 	def.name = mod_name .. "_feedback"
-	local id = player:hud_add(def)
-	huds[playername] = {
-		id = id,
-		time = os.time(),
-	}
+	if player and player.hud_add then
+		local id = player:hud_add(def)
+		huds[playername] = {
+			id = id,
+			time = os.time(),
+		}
+	end
 end
 
 notify.warn = function(player, message)
@@ -67,7 +71,7 @@ notify.__call = function(self, player, message, params)
 	end
 	message = "[" .. mod_name .. "] " .. message
 	local hud = huds[playername]
-	if hud then
+	if hud and player.hud_remove then
 		player:hud_remove(hud.id)
 	end
 	hud_create(player, message, params)
