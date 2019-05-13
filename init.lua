@@ -559,7 +559,7 @@ rhotator.check_on_rotate_handler = function(pos, node, nodedef, player, click, n
 		return false
 	elseif nodedef.on_rotate then
 		-- Copy pos and node because callback can modify it
-		local pass_node = {name = node.name, param1 = node.param1, param2 = node.param2}
+		local pass_node = table.copy(node)
 		local pass_pos = vector.new(pos)
 		local result = nodedef.on_rotate(pass_pos, pass_node, player, click, new_param2)
 		if result == true then
