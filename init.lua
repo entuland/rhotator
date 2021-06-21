@@ -47,6 +47,7 @@ end
 local rhotator_command_description = table.concat({
 	"displays this description",
 	"/rhotator memory [on|off|auto]: displays or sets rotation memory for newly placed blocks (auto means 'auto copy from pointed-to node if possible, no rotation otherwise')",
+	"/rhotator require_tool [on|off]: displays or sets requirement of tool in inventory for newly placed nodes",
 	"/rhotator multi: lists the configuration of the multitool",
 	"/rhotator multi invert_buttons [on|off]: displays or sets mouse button inversion in the multitool",
 	"/rhotator multi invert_sneak [on|off]: displays or sets sneak effect inversion in the multitool",
@@ -415,8 +416,35 @@ end
 
 local copy_rotation_callback
 
+local rhotator_tools = {
+	"rhotator:screwdriver",
+	"rhotator:screwdriver_alt",
+	"rhotator:memory",
+	"rhotator:screwdriver_multi",
+}
+
+local function rhotator_inventory_contains_tool(player)
+	local player_inv = player:get_inventory()
+	local holding_tool = false
+	for _, tool in pairs(rhotator_tools) do
+		if player_inv:contains_item("main", tool) then
+			holding_tool = true
+			break
+		end
+	end
+	return holding_tool
+end
+
 local function rhotator_on_placenode(pos, newnode, player, oldnode, itemstack, pointed_thing)
 	local playername = player and player:get_player_name() or ""
+	
+	local require_tool = storage:get_int("require_tool_" .. playername) == 1
+
+	if require_tool and not rhotator_inventory_contains_tool(player) then
+		-- notify(player, "Required tool not found in inventory")
+		return
+	end
+	
 	local key = "memory_" .. playername
 	local memory = storage:get_int(key)
 	if memory == OFF then
@@ -478,6 +506,9 @@ function rhotator.command(playername, param)
 	if command == "memory" then
 		flag_helper(playername, "memory", params[1], "Rotation memory")
 		return
+	elseif command == "require_tool" then
+		flag_helper(playername, "require_tool", params[1], "Tool in inventory requirement")
+		return
 	elseif command == "multi" then
 		command = params[1]
 		table.remove(params, 1)
@@ -497,6 +528,7 @@ end
 
 rhotator.command_describe_multi = function(playername)
 	rhotator.command(playername, "memory")
+	rhotator.command(playername, "require_tool")
 	rhotator.command(playername, "multi invert_buttons")
 	rhotator.command(playername, "multi invert_sneak")
 	minetest.chat_send_player(playername, table.concat({
