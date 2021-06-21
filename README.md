@@ -96,7 +96,7 @@ See also the [rotation memory modes section](#rotation-memory-modes).
 
 The Rhotator Multi Tool ![Rhotator Multi Tool](/textures/rhotator-multi.png) `rhotator:screwdriver_multi` combines four main features in a single tool: rotating faces clockwise, pushing edges, cycling throuh the memory modes and copying the rotation from a node. The multi tool can be configured to swap buttons around and to invert the effect of the sneak key. You cannot rotate faces counter-clockwise or pull edges with the multi tool.
 
-See the [commands section](#commands) for details about to configure the multi tool.
+See the [commands section](#chat-commands) for details about to configure the multi tool.
 
 # Non-full nodes
 
