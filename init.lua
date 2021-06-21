@@ -413,14 +413,30 @@ local function flag_helper(playername, key_prefix, flag, readable, use_hud)
 	end
 end
 
+local rhotator_tools = {
+	"rhotator:screwdriver",
+	"rhotator:screwdriver_alt",
+	"rhotator:memory",
+	"rhotator:screwdriver_multi",
+}
 local copy_rotation_callback
-
 local function rhotator_on_placenode(pos, newnode, player, oldnode, itemstack, pointed_thing)
 	local playername = player and player:get_player_name() or ""
 	local key = "memory_" .. playername
 	local memory = storage:get_int(key)
 	if memory == OFF then
 		-- notify(player, "Default placement (memory placement is off)")
+		return
+	end
+	local player_inv = player:get_inventory()
+	local holding_tool = false
+	for _,tool in pairs(rhotator_tools) do
+		if player_inv:contains_item("main", tool) then
+			holding_tool = true
+			break
+		end
+	end
+	if not holding_tool then
 		return
 	end
 
