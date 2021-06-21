@@ -147,6 +147,8 @@ Recipes can be customized by editing the `custom.recipes.lua` file that gets cre
 
   `/rhotator memory [on|off|auto]`: displays or sets rotation memory for newly placed blocks
 
+  `/rhotator require_tool [on|off]`: displays or sets requirement of tool in inventory for newly placed nodes
+
   `/rhotator multi`: lists the configuration of the multitool
 
   `/rhotator multi invert_buttons [on|off]`: displays or sets mouse button inversion in the multitool
