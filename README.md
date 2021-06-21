@@ -145,7 +145,7 @@ Recipes can be customized by editing the `custom.recipes.lua` file that gets cre
 
   `/rhotator`: displays this description
 
-  `/rhotator memory [on|off|auto]`: displays or sets rotation memory for newly placed blocks
+  `/rhotator memory [on|off|auto]`: displays or sets rotation memory for newly placed blocks (auto means 'auto copy from pointed-to node if possible, no rotation otherwise')
 
   `/rhotator require_tool [on|off]`: displays or sets requirement of tool in inventory for newly placed nodes
 
@@ -156,6 +156,8 @@ Recipes can be customized by editing the `custom.recipes.lua` file that gets cre
   `/rhotator multi invert_sneak [on|off]`: displays or sets sneak effect inversion in the multitool
 
 Rotation memory starts off by default, it gets stored and recalled for each player between different sessions and between server restarts.
+
+Tool requirement starts off by default to preserve old behavior on existing installations and existing players - for new installations and new players the memory defaulting to off makes sure that newly placed nodes aren't messed with anyways.
 
 # Usage feedback
 
