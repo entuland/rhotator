@@ -147,7 +147,9 @@ Recipes can be customized by editing the `custom.recipes.lua` file that gets cre
 
   `/rhotator memory [on|off|auto]`: displays or sets rotation memory for newly placed blocks (auto means 'auto copy from pointed-to node if possible, no rotation otherwise')
 
-  `/rhotator require_tool [on|off]`: displays or sets requirement of tool in inventory for newly placed nodes
+  `/rhotator require_tool [on|off|default]`: displays or sets requirement of tool in inventory for newly placed nodes, default means 'server default'
+
+  `/rhotator server_require_tool [on|off]`: displays or sets server default requirement of tool in inventory, player choice takes precedence, requires priv 'rhotator_admin' to alter this value
 
   `/rhotator multi`: lists the configuration of the multitool
 

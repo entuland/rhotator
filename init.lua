@@ -47,7 +47,8 @@ end
 local rhotator_command_description = table.concat({
 	"displays this description",
 	"/rhotator memory [on|off|auto]: displays or sets rotation memory for newly placed blocks (auto means 'auto copy from pointed-to node if possible, no rotation otherwise')",
-	"/rhotator require_tool [on|off]: displays or sets requirement of tool in inventory for newly placed nodes",
+	"/rhotator require_tool [on|off|default]: displays or sets requirement of tool in inventory for newly placed nodes, default means 'server default'",
+	"/rhotator server_require_tool [on|off]: displays or sets server default requirement of tool in inventory, player choice takes precedence, requires priv 'rhotator_admin' to alter this value",
 	"/rhotator multi: lists the configuration of the multitool",
 	"/rhotator multi invert_buttons [on|off]: displays or sets mouse button inversion in the multitool",
 	"/rhotator multi invert_sneak [on|off]: displays or sets sneak effect inversion in the multitool",
@@ -392,7 +393,18 @@ local function flag_helper(playername, key_prefix, flag, readable, use_hud)
 	local player = minetest.get_player_by_name(playername)
 	if not player then return end
 	local key = key_prefix .. "_" .. playername
-	local newval = storage:get_int(key) or 0
+	
+	if key_prefix == "server_require_tool" then
+		key = "server_require_tool"
+	end
+	
+	local curval = storage:get(key)
+	if curval ~= nil then
+		curval = storage:get_int(key)
+	end
+	
+	local newval = nil
+	local statuses = {"off", "on", "auto"}
 	if flag == "off" then
 		newval = 0
 		storage:set_int(key, newval)
@@ -402,15 +414,26 @@ local function flag_helper(playername, key_prefix, flag, readable, use_hud)
 	elseif key_prefix == "memory" and flag == "auto" then
 		newval = 2
 		storage:set_int(key, newval)
+	elseif key_prefix == "require_tool" and (flag == "default" or curval == nil) then
+		newval = 2
+		statuses[3] = "server default"
+		storage:set_string(key, "")
 	elseif flag then
 		rhotator.command(playername, "")
 		return
 	end
-	newval = ({"off", "on", "auto"})[newval + 1]
+	
+	if curval == nil then
+		curval = 0
+	end
+	if newval ~= nil then
+		curval = newval
+	end
+	local status = statuses[curval + 1]
 	if use_hud then
-		notify(playername, readable .. " is " .. newval)
+		notify(playername, readable .. " is " .. status)
 	else
-		minetest.chat_send_player(playername, "[rhotator] " .. readable .. " is " .. newval)
+		minetest.chat_send_player(playername, "[rhotator] " .. readable .. " is " .. status)
 	end
 end
 
@@ -438,7 +461,13 @@ end
 local function rhotator_on_placenode(pos, newnode, player, oldnode, itemstack, pointed_thing)
 	local playername = player and player:get_player_name() or ""
 	
-	local require_tool = storage:get_int("require_tool_" .. playername) == 1
+	local require_tool = false
+	
+	if storage:get("require_tool_" .. playername) == nil then
+		require_tool = storage:get_int("server_require_tool") == 1
+	else
+		require_tool = storage:get_int("require_tool_" .. playername) == 1
+	end
 
 	if require_tool and not rhotator_inventory_contains_tool(player) then
 		-- notify(player, "Required tool not found in inventory")
@@ -522,6 +551,13 @@ function rhotator.command(playername, param)
 			rhotator.command_describe_multi(playername)
 			return
 		end
+	elseif command == "server_require_tool" then
+		if minetest.get_player_privs(playername).rhotator_admin or not params[1] then
+			flag_helper(playername, "server_require_tool", params[1], "Server default for tool in inventory requirement")
+		else
+			minetest.chat_send_player(playername, "[rhotator] Missing 'rhotator_admin' privilege")
+		end
+		return
 	end
 	minetest.chat_send_player(playername, "[rhotator] unsupported param: " .. param)
 end
@@ -529,6 +565,7 @@ end
 rhotator.command_describe_multi = function(playername)
 	rhotator.command(playername, "memory")
 	rhotator.command(playername, "require_tool")
+	rhotator.command(playername, "server_require_tool")
 	rhotator.command(playername, "multi invert_buttons")
 	rhotator.command(playername, "multi invert_sneak")
 	minetest.chat_send_player(playername, table.concat({
@@ -744,4 +781,9 @@ minetest.register_on_placenode(rhotator_on_placenode)
 minetest.register_chatcommand("rhotator", {
 	description = rhotator_command_description,
 	func = rhotator.command
+})
+
+minetest.register_privilege("rhotator_admin", {
+	description = "Can alter the 'server_require_tool' flag via the `/rhotator` command",
+	give_to_singleplayer = true,
 })
