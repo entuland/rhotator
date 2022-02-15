@@ -1,8 +1,6 @@
 local mod_name = minetest.get_current_modname()
 local hud_name = ("%s_feedback"):format(mod_name)
 
-local is_multicraft = minetest.get_version().project == "MultiCraft"
-
 local hud_info_by_player_name = {}
 local hud_timeout_seconds = 3
 
@@ -47,8 +45,8 @@ local function hud_update(player, player_name, hud_id, message, params)
 	local def = get_hud_def(message, params)
 
 	for key, value in pairs(def) do
-		-- multicraft has a bug that requires the "value" argument of hud_change to be a number
-		if not is_multicraft or type(value) == "number" then
+		-- minetest < 5.5 and multicraft can't handle changes to hud_elem_type
+		if key ~= "hud_elem_type" then
 			player:hud_change(hud_id, key, value)
 		end
 	end
@@ -104,13 +102,13 @@ notify.__call = function(self, player, message, params)
 	if type(player) == "string" then
 		player_name = player
 		player = minetest.get_player_by_name(player_name)
-
-	elseif is_valid_player(player) then
-		player_name = player:get_player_name()
 	end
 
-	if not player and player_name then
+	if not is_valid_player(player) then
 		return
+
+	elseif not player_name then
+		player_name = player:get_player_name()
 	end
 
 	message = ("[%s] %s"):format(mod_name, message)
