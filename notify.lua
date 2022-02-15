@@ -102,13 +102,13 @@ notify.__call = function(self, player, message, params)
 	if type(player) == "string" then
 		player_name = player
 		player = minetest.get_player_by_name(player_name)
-
-	elseif is_valid_player(player) then
-		player_name = player:get_player_name()
 	end
 
-	if not player and player_name then
+	if not is_valid_player(player) then
 		return
+
+	elseif not player_name then
+		player_name = player:get_player_name()
 	end
 
 	message = ("[%s] %s"):format(mod_name, message)
