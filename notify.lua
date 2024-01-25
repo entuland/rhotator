@@ -64,7 +64,7 @@ minetest.register_globalstep(function()
 		if now > hud_info.timeout then
 			local player = minetest.get_player_by_name(player_name)
 
-			if player then
+			if player and hud_info.id then
 				local hud_def = player:hud_get(hud_info.id)
 				if hud_def and hud_def.name == hud_name then
 					player:hud_remove(hud_info.id)
