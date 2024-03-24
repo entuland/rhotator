@@ -116,7 +116,7 @@ notify.__call = function(self, player, message, params)
 	local hud_info = hud_info_by_player_name[player_name]
 	local hud_def
 
-	if hud_info then
+	if hud_info and hud_info.id then
 		hud_def = player:hud_get(hud_info.id)
 	end
 
