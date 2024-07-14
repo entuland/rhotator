@@ -89,12 +89,9 @@ end
 notify.error = notify.err
 
 local function is_valid_player(player)
-	return player
-		and player.get_player_name
-		and player.hud_get
-		and player.hud_add
-		and player.hud_change
-		and player.hud_remove
+	return type(player) == "userdata"   -- make sure it is the builtin player
+	    and type(player.is_player) == "function"
+		and player:is_player()
 end
 
 notify.__call = function(self, player, message, params)
