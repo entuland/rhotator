@@ -1,4 +1,4 @@
-# Rhotator Screwdriver (rhotator) v1.5
+# Rhotator Screwdriver (rhotator) v1.6
 
 A different twist at Minetest screwdriving.
 
@@ -20,7 +20,7 @@ A thin wrapper around a very useful library to deal with Matrices:
 
 # Important
 
-From version 1.5 recipes for all crafts can be customized in `[luanti root]/mod_data/rhotator/custom.recipes.lua` - anytime you're upgrading this mod verify `default/recipes.lua` for new crafts or a different file format and update `custom.recipes.lua` accordingly.
+From version 1.6 recipes for all crafts can be customized in `[luanti root]/mod_data/rhotator/custom.recipes.lua` - anytime you're upgrading this mod verify `default/recipes.lua` for new crafts or a different file format and update `custom.recipes.lua` accordingly.
 
 # Main features
 
