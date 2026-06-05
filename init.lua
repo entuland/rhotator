@@ -264,29 +264,28 @@ local function copy_file(source, dest)
 	return true, "files copied successfully"
 end
 
-local function custom_or_default(modname, path, filename)
+local function custom_or_default(modname, default_path, custom_path, filename)
 	local default_filename = "default/" .. filename
-	local full_filename = path .. "/custom." .. filename
-	local full_default_filename = path .. "/" .. default_filename
-
-	os.rename(path .. "/" .. filename, full_filename)
-
-	local file = io.open(full_filename, "rb")
+	local custom_filename = "custom." .. filename
+	local full_custom_filename = custom_path .. "/" .. custom_filename
+	local full_default_filename = default_path .. "/" .. default_filename
+	
+	local file = io.open(full_custom_filename, "rb")
 	if not file then
-		minetest.debug("[" .. modname .. "] Copying " .. default_filename .. " to " .. filename .. " (path: " .. path .. ")")
-		local success, err = copy_file(full_default_filename, full_filename)
+		minetest.debug("[" .. modname .. "] Copying " .. default_filename .. " to " .. custom_filename .. " (path: " .. custom_path .. ")")
+		local success, err = copy_file(full_default_filename, full_custom_filename)
 		if not success then
 			minetest.debug("[" .. modname .. "] " .. err)
 			return false
 		end
-		file = io.open(full_filename, "rb")
+		file = io.open(full_custom_filename, "rb")
 		if not file then
-			minetest.debug("[" .. modname .. "] Unable to load " .. filename .. " file from path " .. path)
+			minetest.debug("[" .. modname .. "] Unable to load " .. filename .. " file from path " .. custom_path)
 			return false
 		end
 	end
 	file:close()
-	return full_filename
+	return full_custom_filename
 end
 
 -- ============================================================
@@ -759,7 +758,7 @@ minetest.register_node("rhotator:cube", {
 	groups = { snappy = 2, choppy = 2, oddly_breakable_by_hand = 3 },
 })
 
-local full_recipes_filename = custom_or_default("rhotator", mod_path, "recipes.lua")
+local full_recipes_filename = custom_or_default("rhotator", mod_path, minetest.get_mod_data_path(), "recipes.lua")
 if not full_recipes_filename then
 	error("[rhotator] unable to find " .. mod_path .. "/custom.recipes.lua")
 end

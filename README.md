@@ -1,8 +1,8 @@
-# Rhotator Screwdriver (rhotator) v1.4
+# Rhotator Screwdriver (rhotator) v1.5
 
 A different twist at Minetest screwdriving.
 
-Tested on Minetest 0.4.16, 0.4.17 and 5.0.0 (latest dev snapshot)
+Tested on Minetest 0.4.16, 0.4.17, 5.0.0 (latest dev snapshot), last version tested on Luanti 5.16.0 - try in other versions at your own risk :)
 
 If you like my contributions you may consider reading http://entuland.com/en/support-entuland
 
@@ -20,7 +20,7 @@ A thin wrapper around a very useful library to deal with Matrices:
 
 # Important
 
-From version 1.3 recipes for all crafts can be customized in `custom.recipes.lua` - anytime you're upgrading this mod verify `default/recipes.lua` for new crafts or a different file format and update `custom.recipes.lua` accordingly.
+From version 1.5 recipes for all crafts can be customized in `[luanti root]/mod_data/rhotator/custom.recipes.lua` - anytime you're upgrading this mod verify `default/recipes.lua` for new crafts or a different file format and update `custom.recipes.lua` accordingly.
 
 # Main features
 
