@@ -633,9 +633,10 @@ rhotator.check_on_rotate_handler = function(pos, node, nodedef, player, click, n
 		if result == true then
 			notify(player, "Rotation reportedly performed by on_rotate()")
 			return false
-		end
-		notify.warning(player, "Rotation disallowed by on_rotate() return value")
-		return false
+		elseif result == false then
+            notify.warning(player, "Rotation disallowed by on_rotate() return value")
+		    return false
+        end
 	end
 	return true
 end
